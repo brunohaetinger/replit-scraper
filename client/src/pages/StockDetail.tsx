@@ -8,15 +8,6 @@ import { ArrowLeft, TrendingUp, Info } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 
-// Mock history data generator (since API only returns latest snapshot in basic schema)
-// In a real app, we would fetch historical endpoint
-const generateMockHistory = (baseValue: number, volatility: number) => {
-  return Array.from({ length: 12 }, (_, i) => ({
-    date: format(new Date(2023, i, 1), "MMM yyyy"),
-    value: baseValue + (Math.random() * volatility - volatility/2) + (i * volatility * 0.1)
-  }));
-};
-
 export default function StockDetail() {
   const [match, params] = useRoute("/stocks/:ticker");
   const ticker = params?.ticker;
@@ -38,10 +29,19 @@ export default function StockDetail() {
 
   const fundamental = stock.latest || {};
   
-  // Generating mock history for visualization based on current values
-  const profitHistory = generateMockHistory(fundamental.netProfit || 100, 20);
-  const roeHistory = generateMockHistory(fundamental.roe || 15, 2);
-  const divYieldHistory = generateMockHistory(fundamental.divYield || 6, 1);
+  // Transform real historical data for charts
+  const history = stock.history || [];
+  
+  const profitHistory = history.map((h: any) => ({
+    date: format(new Date(h.date), "MMM yy"),
+    value: h.netProfit
+  }));
+  
+  const roeHistory = history.map((h: any) => ({
+    date: format(new Date(h.date), "MMM yy"),
+    roe: h.roe,
+    divYield: h.divYield
+  }));
 
   return (
     <div className="min-h-screen bg-background font-body pb-20">
@@ -158,7 +158,10 @@ export default function StockDetail() {
                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis 
                     dataKey="date" 
-                    hide
+                    stroke="var(--muted-foreground)" 
+                    fontSize={12} 
+                    tickLine={false} 
+                    axisLine={false}
                   />
                   <YAxis 
                     stroke="var(--muted-foreground)" 
@@ -176,16 +179,15 @@ export default function StockDetail() {
                   <Line 
                     name="ROE"
                     type="monotone" 
-                    dataKey="value" 
+                    dataKey="roe" 
                     stroke="var(--accent)" 
                     strokeWidth={2} 
                     dot={false}
                   />
                   <Line 
                     name="Div Yield"
-                    data={divYieldHistory}
                     type="monotone" 
-                    dataKey="value" 
+                    dataKey="divYield" 
                     stroke="var(--primary)" 
                     strokeWidth={2} 
                     strokeDasharray="5 5"
@@ -200,7 +202,7 @@ export default function StockDetail() {
                 <span className="text-muted-foreground">ROE Trend</span>
               </div>
                <div className="flex items-center gap-2">
-                <div className="w-3 h-1 bg-blue-500 rounded-full opacity-50 border-dashed" />
+                <div className="w-3 h-1 bg-blue-500 rounded-full opacity-50" style={{backgroundImage: 'linear-gradient(90deg, var(--primary) 0%, var(--primary) 50%, transparent 50%)'}} />
                 <span className="text-muted-foreground">Div. Yield Trend</span>
               </div>
             </div>
