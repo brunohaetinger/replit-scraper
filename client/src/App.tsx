@@ -3,14 +3,19 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
+// Pages
+import Home from "@/pages/Home";
+import MagicFormula from "@/pages/MagicFormula";
+import StockDetail from "@/pages/StockDetail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
+      <Route path="/" component={Home} />
+      <Route path="/magic-formula" component={MagicFormula} />
+      <Route path="/stocks/:ticker" component={StockDetail} />
       <Route component={NotFound} />
     </Switch>
   );

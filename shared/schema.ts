@@ -1,18 +1,56 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, real, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+// === TABLE DEFINITIONS ===
+export const stocks = pgTable("stocks", {
+  ticker: text("ticker").primaryKey(),
+  name: text("name").notNull(),
+  sector: text("sector"),
+  isStateOwned: boolean("is_state_owned").default(false),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const fundamentals = pgTable("fundamentals", {
+  id: serial("id").primaryKey(),
+  ticker: text("ticker").notNull(),
+  date: date("date").notNull(), // Snapshot date for historical analysis
+  
+  // Basic Analysis
+  pl: real("p_l"),          // P/L
+  roe: real("roe"),         // ROE
+  pvp: real("p_vp"),        // P/VP
+  divYield: real("div_yield"), // Dividend Yield %
+  netProfit: real("net_profit"), // Net Profit (absolute or scaled)
+  
+  // Magic Formula
+  ebitEv: real("ebit_ev"),   // EBIT/EV
+  roic: real("roic"),        // ROIC
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// === SCHEMAS ===
+export const insertStockSchema = createInsertSchema(stocks);
+export const insertFundamentalSchema = createInsertSchema(fundamentals).omit({ id: true });
+
+// === TYPES ===
+export type Stock = typeof stocks.$inferSelect;
+export type Fundamental = typeof fundamentals.$inferSelect;
+export type InsertStock = z.infer<typeof insertStockSchema>;
+export type InsertFundamental = z.infer<typeof insertFundamentalSchema>;
+
+// Request Types
+export type FilterRequest = {
+  maxPl?: number;
+  minRoe?: number;
+  maxPvp?: number;
+  minDivYield?: number;
+  excludeStateOwned?: boolean;
+};
+
+// Response Types
+export type StockWithLatestFundamental = Stock & {
+  latest: Fundamental | null;
+};
+
+export type MagicFormulaRanked = StockWithLatestFundamental & {
+  magicFormulaRank: number;
+};

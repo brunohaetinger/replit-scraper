@@ -1,0 +1,86 @@
+import { useState } from "react";
+import { Header } from "@/components/Header";
+import { SidebarFilters } from "@/components/SidebarFilters";
+import { StockTable } from "@/components/StockTable";
+import { useStocks } from "@/hooks/use-stocks";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+
+export default function Home() {
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({
+    maxPl: 15,
+    minRoe: 10,
+    maxPvp: 2.5,
+    minDivYield: 6,
+    excludeStateOwned: false,
+  });
+
+  const { data: stocks, isLoading, refetch, isRefetching } = useStocks({
+    search,
+    ...filters,
+  });
+
+  const handleReset = () => {
+    setFilters({
+      maxPl: 15,
+      minRoe: 10,
+      maxPvp: 2.5,
+      minDivYield: 6,
+      excludeStateOwned: false,
+    });
+    setSearch("");
+  };
+
+  return (
+    <div className="min-h-screen bg-background font-body text-foreground">
+      <Header onSearch={setSearch} />
+      
+      <main className="container mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          {/* Filters Sidebar - Hidden on mobile, handled differently in real app but stacked here for now */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-24">
+              <SidebarFilters 
+                values={filters} 
+                onChange={setFilters} 
+                onReset={handleReset} 
+              />
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <div className="flex-1 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-display font-bold text-foreground">Stock Screener</h1>
+                <p className="text-muted-foreground mt-1">
+                  Find undervalued companies based on fundamental analysis.
+                </p>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => refetch()}
+                className="h-10 w-10 rounded-xl"
+                disabled={isRefetching}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+
+            {/* Mobile Filters would go here (Collapsible) */}
+            
+            <StockTable stocks={stocks || []} isLoading={isLoading} />
+            
+            <div className="text-center text-sm text-muted-foreground pt-8">
+              Showing {stocks?.length || 0} results based on your criteria.
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
