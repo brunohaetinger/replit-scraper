@@ -49,6 +49,7 @@ Scraping can be triggered manually or via a scheduled job (implement in server i
 3. Set up environment:
    - Create `.env` with `DATABASE_URL=postgres://user:pass@host:port/db` (see server/db.ts).
    - Add any API keys if needed.
+   - Local DB: `podman run -d --name postgres-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=yourpassword -e POSTGRES_DB=replit_scraper -p 5432:5432 docker.io/library/postgres:16`
 
 4. Initialize database:
    ```
