@@ -21,17 +21,42 @@ The dashboard includes features like stock filtering, detailed views, and the Ma
 - **Backend**: Node.js, Express.js, TypeScript
 - **Database**: PostgreSQL with Drizzle ORM and Zod validation
 - **State Management**: TanStack Query
+- **Web Scraping**: Cheerio for HTML parsing
 - **Other**: Passport.js for authentication, WebSockets for real-time updates
 
 ## How It Works
 
-1. **Data Scraping**: The backend (server/index.ts) uses HTTP requests to fetch data from fundamentus.com.br/resultado.php, parses the HTML (likely with Cheerio or similar), and extracts stock metrics.
-2. **Data Storage**: Parsed data is inserted into a PostgreSQL database using Drizzle ORM (see shared/schema.ts).
-3. **API Layer**: Express server (server/routes.ts) provides REST endpoints for querying stock data, shared with frontend via shared/routes.ts.
+1. **Data Scraping**: The backend (server/scraper.ts) uses HTTP requests with Cheerio to fetch and parse HTML from fundamentus.com.br/resultado.php, extracting stock metrics including:
+   - Ticker symbol and company name
+   - Sector classification
+   - Fundamental ratios (P/L, P/VP, ROE, ROIC)
+   - Dividend Yield
+   - EBIT/EV and liquidity metrics
+   - Net profit data
+
+2. **Data Storage**: Parsed data is upserted into a PostgreSQL database using Drizzle ORM (see shared/schema.ts). The system intelligently updates existing records or creates new ones.
+
+3. **API Layer**: Express server (server/routes.ts) provides REST endpoints:
+   - `GET /api/stocks` - Query stocks with filters
+   - `GET /api/stocks/:ticker` - Get individual stock details with history
+   - `POST /api/scrape` - Trigger data scraping from fundamentus.com.br
+
 4. **Frontend Rendering**: React app (client/src) consumes APIs with TanStack Query, renders components like StockTable, MetricCard, and pages (Home.tsx, StockDetail.tsx, MagicFormula.tsx).
+
 5. **Build & Dev**: Frontend built with Vite; backend with tsx for dev and esbuild for production.
 
-Scraping can be triggered manually or via a scheduled job (implement in server if needed).
+### Scraping Data
+
+You can scrape real-time data from fundamentus.com.br in two ways:
+
+1. **Via UI**: Click the "Scrape Data" button in the top-right of the dashboard
+2. **Via API**: Send a POST request to `/api/scrape`
+
+The scraper will:
+- Fetch the latest data table from fundamentus.com.br/resultado.php
+- Parse all stock entries with their fundamental metrics
+- Update the database with the latest values
+- Return statistics about the scraping operation
 
 ## Installation
 
@@ -72,12 +97,28 @@ Scraping can be triggered manually or via a scheduled job (implement in server i
 ## Usage
 
 - Navigate to http://localhost:5173
+- Click "Scrape Data" button to fetch the latest data from fundamentus.com.br
 - Use SidebarFilters to select and filter stocks
 - View aggregated metrics on Home page
 - Analyze individual stocks on StockDetail
 - Screen stocks with Magic Formula on dedicated page
 
-To update data, implement or run a scraping endpoint (e.g., POST /scrape).
+### Manual Scraping via API
+
+```bash
+curl -X POST http://localhost:5000/api/scrape
+```
+
+Response example:
+```json
+{
+  "message": "Scraping completed successfully",
+  "scraped": 450,
+  "stocksCreated": 50,
+  "stocksUpdated": 400,
+  "fundamentalsCreated": 450
+}
+```
 
 ## Screenshots
 

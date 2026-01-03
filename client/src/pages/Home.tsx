@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { SidebarFilters } from "@/components/SidebarFilters";
 import { StockTable } from "@/components/StockTable";
-import { useStocks } from "@/hooks/use-stocks";
+import { useStocks, useScrapeData } from "@/hooks/use-stocks";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Download } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({
     maxPl: 15,
@@ -21,6 +23,8 @@ export default function Home() {
     ...filters,
   });
 
+  const scrapeMutation = useScrapeData();
+
   const handleReset = () => {
     setFilters({
       maxPl: 15,
@@ -30,6 +34,22 @@ export default function Home() {
       excludeStateOwned: false,
     });
     setSearch("");
+  };
+
+  const handleScrape = async () => {
+    try {
+      const result = await scrapeMutation.mutateAsync();
+      toast({
+        title: "Data Scraped Successfully",
+        description: `Scraped ${result.scraped} stocks. Created: ${result.stocksCreated}, Updated: ${result.stocksUpdated}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Scraping Failed",
+        description: error.message || "Failed to scrape data from fundamentus.com.br",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -60,15 +80,27 @@ export default function Home() {
                 </p>
               </div>
               
-              <Button 
-                variant="outline" 
-                size="icon" 
-                onClick={() => refetch()}
-                className="h-10 w-10 rounded-xl"
-                disabled={isRefetching}
-              >
-                <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={handleScrape}
+                  disabled={scrapeMutation.isPending}
+                  className="rounded-xl"
+                >
+                  <Download className={`w-4 h-4 mr-2 ${scrapeMutation.isPending ? 'animate-pulse' : ''}`} />
+                  Scrape Data
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => refetch()}
+                  className="h-10 w-10 rounded-xl"
+                  disabled={isRefetching}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
 
             {/* Mobile Filters would go here (Collapsible) */}

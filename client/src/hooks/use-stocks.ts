@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertStock, type InsertFundamental } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
+import { type InsertStock, type InsertFundamental } from "@shared/schema";
 import { z } from "zod";
 
 // Filter params type derived from API schema input
@@ -96,6 +97,27 @@ export function useAddFundamental() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.stocks.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.stocks.get.path, variables.ticker] });
+    },
+  });
+}
+
+export function useScrapeData() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.stocks.scrape.path, {
+        method: api.stocks.scrape.method,
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to scrape data");
+      }
+      return api.stocks.scrape.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      // Invalidate all stock queries to refresh data
+      queryClient.invalidateQueries({ queryKey: [api.stocks.list.path] });
     },
   });
 }

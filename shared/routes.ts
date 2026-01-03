@@ -43,6 +43,23 @@ export const api = {
       responses: {
         201: z.custom<typeof fundamentals.$inferSelect>(),
       }
+    },
+    scrape: {
+      method: 'POST' as const,
+      path: '/api/scrape',
+      responses: {
+        200: z.object({
+          message: z.string(),
+          scraped: z.number(),
+          stocksCreated: z.number(),
+          stocksUpdated: z.number(),
+          fundamentalsCreated: z.number(),
+        }),
+        500: z.object({
+          message: z.string(),
+          error: z.string().optional(),
+        }),
+      }
     }
   },
 };

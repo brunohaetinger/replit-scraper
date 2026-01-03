@@ -26,6 +26,10 @@ export interface IStorage {
   createStock(stock: InsertStock): Promise<Stock>;
   addFundamental(data: InsertFundamental): Promise<Fundamental>;
   
+  // Scraper support
+  upsertStock(stock: InsertStock): Promise<Stock>;
+  upsertFundamental(data: InsertFundamental): Promise<Fundamental>;
+  
   // Seed helper
   seedData(): Promise<void>;
 }
@@ -99,11 +103,11 @@ export class DatabaseStorage implements IStorage {
         const ebitRank = new Map(results.map((s, i) => [s.ticker, i + 1]));
         
         // Combine Ranks (Lower is better)
-        results.forEach(s => {
+        results.forEach((s: any) => {
             s.magicRank = (roicRank.get(s.ticker) || 0) + (ebitRank.get(s.ticker) || 0);
         });
         
-        results.sort((a, b) => a.magicRank - b.magicRank);
+        results.sort((a: any, b: any) => a.magicRank - b.magicRank);
     } else {
         results.sort((a, b) => a.ticker.localeCompare(b.ticker));
     }
@@ -131,6 +135,61 @@ export class DatabaseStorage implements IStorage {
   async addFundamental(data: InsertFundamental) {
     const [res] = await db.insert(fundamentals).values(data).returning();
     return res;
+  }
+
+  async upsertStock(stock: InsertStock) {
+    // Try to insert, if exists, update
+    try {
+      const existing = await db.select().from(stocks).where(eq(stocks.ticker, stock.ticker)).limit(1);
+      if (existing.length > 0) {
+        // Update existing stock
+        const [res] = await db.update(stocks)
+          .set({
+            name: stock.name,
+            sector: stock.sector,
+            isStateOwned: stock.isStateOwned,
+          })
+          .where(eq(stocks.ticker, stock.ticker))
+          .returning();
+        return res;
+      } else {
+        // Insert new stock
+        return await this.createStock(stock);
+      }
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  async upsertFundamental(data: InsertFundamental) {
+    // Check if fundamental exists for this ticker and date
+    const existing = await db.select()
+      .from(fundamentals)
+      .where(and(
+        eq(fundamentals.ticker, data.ticker),
+        eq(fundamentals.date, data.date)
+      ))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      // Update existing fundamental
+      const [res] = await db.update(fundamentals)
+        .set({
+          pl: data.pl,
+          roe: data.roe,
+          pvp: data.pvp,
+          divYield: data.divYield,
+          netProfit: data.netProfit,
+          ebitEv: data.ebitEv,
+          roic: data.roic,
+        })
+        .where(eq(fundamentals.id, existing[0].id))
+        .returning();
+      return res;
+    } else {
+      // Insert new fundamental
+      return await this.addFundamental(data);
+    }
   }
   
   async seedData() {
