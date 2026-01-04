@@ -47,16 +47,26 @@ The dashboard includes features like stock filtering, detailed views, and the Ma
 
 ### Scraping Data
 
-You can scrape real-time data from fundamentus.com.br in two ways:
+You can scrape real-time data from fundamentus.com.br in multiple ways:
 
+#### Bulk Scraping (All Stocks)
 1. **Via UI**: Click the "Scrape Data" button in the top-right of the dashboard
-2. **Via API**: Send a POST request to `/api/scrape`
+2. **Via API**: `curl -X POST http://localhost:5000/api/scrape`
 
-The scraper will:
+The bulk scraper will:
 - Fetch the latest data table from fundamentus.com.br/resultado.php
-- Parse all stock entries with their fundamental metrics
+- Parse all ~1000 stock entries with their fundamental metrics
 - Update the database with the latest values
 - Return statistics about the scraping operation
+
+#### Individual Stock Details
+1. **Via UI**: Click on a stock → Click "Fetch Complete Details" if shown
+2. **Via API**: `curl -X POST http://localhost:5000/api/scrape/PETR4`
+
+The detail scraper will:
+- Fetch the stock's detail page from fundamentus.com.br/detalhes.php
+- Extract full company name, sector, and subsector
+- Update the stock record with complete information
 
 ## Installation
 
