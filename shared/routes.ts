@@ -60,6 +60,28 @@ export const api = {
           error: z.string().optional(),
         }),
       }
+    },
+    scrapeDetail: {
+      method: 'POST' as const,
+      path: '/api/scrape/:ticker',
+      responses: {
+        200: z.object({
+          message: z.string(),
+          stock: z.object({
+            ticker: z.string(),
+            name: z.string(),
+            sector: z.string(),
+            subsector: z.string(),
+          }),
+        }),
+        404: z.object({
+          message: z.string(),
+        }),
+        500: z.object({
+          message: z.string(),
+          error: z.string().optional(),
+        }),
+      }
     }
   },
 };

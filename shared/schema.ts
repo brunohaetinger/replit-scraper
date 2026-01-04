@@ -7,6 +7,7 @@ export const stocks = pgTable("stocks", {
   ticker: text("ticker").primaryKey(),
   name: text("name").notNull(),
   sector: text("sector"),
+  subsector: text("subsector"),
   isStateOwned: boolean("is_state_owned").default(false),
 });
 
