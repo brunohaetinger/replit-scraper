@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { SidebarFilters } from "@/components/SidebarFilters";
 import { StockTable } from "@/components/StockTable";
+import { MyStockListCard } from "@/components/MyStockListCard";
 import { useStocks, useScrapeData } from "@/hooks/use-stocks";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Download } from "lucide-react";
@@ -17,11 +18,23 @@ export default function Home() {
     minDivYield: 6,
     excludeStateOwned: false,
   });
+  const [myStocks, setMyStocks] = useState<string[]>([]);
+  const [myStockFilter, setMyStockFilter] = useState({ filterMyList: false, highlightMyList: false });
 
-  const { data: stocks, isLoading, refetch, isRefetching } = useStocks({
+  const { data: allStocks, isLoading, refetch, isRefetching } = useStocks({
     search,
     ...filters,
+    sortBy: 'magic_formula',
   });
+
+  // Filter stocks based on myStocks list
+  const stocks = useMemo(() => {
+    if (!allStocks) return [];
+    if (myStockFilter.filterMyList && myStocks.length > 0) {
+      return allStocks.filter(stock => myStocks.includes(stock.ticker));
+    }
+    return allStocks;
+  }, [allStocks, myStockFilter.filterMyList, myStocks]);
 
   const scrapeMutation = useScrapeData();
 
@@ -61,11 +74,16 @@ export default function Home() {
           
           {/* Filters Sidebar - Hidden on mobile, handled differently in real app but stacked here for now */}
           <aside className="hidden lg:block">
-            <div className="sticky top-24">
+            <div className="sticky top-24 space-y-6">
               <SidebarFilters 
                 values={filters} 
                 onChange={setFilters} 
                 onReset={handleReset} 
+              />
+              <MyStockListCard
+                onFilterChange={setMyStockFilter}
+                myStocks={myStocks}
+                onMyStocksChange={setMyStocks}
               />
             </div>
           </aside>
@@ -105,10 +123,17 @@ export default function Home() {
 
             {/* Mobile Filters would go here (Collapsible) */}
             
-            <StockTable stocks={stocks || []} isLoading={isLoading} />
+            <StockTable 
+              stocks={stocks || []} 
+              isLoading={isLoading}
+              highlightStocks={myStockFilter.highlightMyList ? myStocks : []}
+            />
             
             <div className="text-center text-sm text-muted-foreground pt-8">
               Showing {stocks?.length || 0} results based on your criteria.
+              {myStockFilter.filterMyList && myStocks.length > 0 && (
+                <span className="ml-2 text-primary">(Filtered to my list)</span>
+              )}
             </div>
           </div>
         </div>

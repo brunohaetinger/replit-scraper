@@ -1,17 +1,39 @@
 import { useRoute } from "wouter";
-import { useStock } from "@/hooks/use-stocks";
+import { useStock, useScrapeStockDetail } from "@/hooks/use-stocks";
 import { Header } from "@/components/Header";
 import { MetricCard } from "@/components/MetricCard";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, TrendingUp, Info } from "lucide-react";
+import { ArrowLeft, TrendingUp, Info, Download, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StockDetail() {
   const [match, params] = useRoute("/stocks/:ticker");
   const ticker = params?.ticker;
   const { data: stock, isLoading } = useStock(ticker || "");
+  const { toast } = useToast();
+  const scrapeDetailMutation = useScrapeStockDetail();
+
+  const handleScrapeDetails = async () => {
+    if (!ticker) return;
+    
+    try {
+      const result = await scrapeDetailMutation.mutateAsync(ticker);
+      toast({
+        title: "Details Updated",
+        description: `Successfully updated details for ${result.stock.name}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to Update",
+        description: error.message || "Could not fetch stock details",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return <StockDetailSkeleton />;
@@ -28,6 +50,7 @@ export default function StockDetail() {
   }
 
   const fundamental = stock.latest || {};
+  const hasLimitedInfo = stock.name === stock.ticker || stock.sector === 'Unknown';
   
   // Transform real historical data for charts
   const history = stock.history || [];
@@ -55,7 +78,7 @@ export default function StockDetail() {
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6 mb-10">
-          <div>
+          <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-4xl font-mono font-bold text-foreground tracking-tight">
                 {stock.ticker}
@@ -69,8 +92,44 @@ export default function StockDetail() {
             <h2 className="text-xl text-muted-foreground font-medium">{stock.name}</h2>
             <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
               <span className="bg-muted px-2 py-1 rounded-md">{stock.sector || "Unknown Sector"}</span>
+              {stock.subsector && (
+                <>
+                  <span>•</span>
+                  <span className="bg-muted px-2 py-1 rounded-md">{stock.subsector}</span>
+                </>
+              )}
               <span>•</span>
               <span>Updated {format(new Date(), "MMM d, yyyy")}</span>
+            </div>
+            
+            <div className="mt-4 flex gap-2">
+              {hasLimitedInfo && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleScrapeDetails}
+                  disabled={scrapeDetailMutation.isPending}
+                  className="text-xs"
+                >
+                  <Download className={`w-3 h-3 mr-2 ${scrapeDetailMutation.isPending ? 'animate-pulse' : ''}`} />
+                  Fetch Complete Details
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="text-xs"
+              >
+                <a 
+                  href={`https://statusinvest.com.br/acoes/${stock.ticker.toLowerCase()}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="w-3 h-3 mr-2" />
+                  View on Status Invest
+                </a>
+              </Button>
             </div>
           </div>
           
