@@ -187,3 +187,76 @@ export function isLikelyStateOwned(name: string, ticker: string): boolean {
   return stateKeywords.some(keyword => lowerName.includes(keyword)) ||
          stateTickers.includes(lowerTicker);
 }
+
+export interface StockDetail {
+  ticker: string;
+  name: string;
+  sector: string;
+  subsector: string;
+}
+
+/**
+ * Scrapes detailed information for a specific stock
+ */
+export async function scrapeStockDetail(ticker: string): Promise<StockDetail | null> {
+  const url = `https://www.fundamentus.com.br/detalhes.php?papel=${ticker}`;
+  
+  log(`Scraping details for ${ticker}`, 'scraper');
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      }
+    });
+    
+    if (!response.ok) {
+      log(`Failed to fetch details for ${ticker}: ${response.status}`, 'scraper');
+      return null;
+    }
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    let name = ticker;
+    let sector = 'Unknown';
+    let subsector = 'Unknown';
+    
+    // Find all rows with label/data structure
+    $('td.label').each((_, labelCell) => {
+      const label = $(labelCell).find('.txt').text().trim();
+      const dataCell = $(labelCell).next('td.data');
+      
+      if (dataCell.length === 0) return;
+      
+      // Try to get text from link first, then from span
+      let value = dataCell.find('a').text().trim();
+      if (!value) {
+        value = dataCell.find('.txt').text().trim();
+      }
+      
+      if (label === 'Empresa') {
+        name = value || ticker;
+      } else if (label === 'Setor') {
+        sector = value || 'Unknown';
+      } else if (label === 'Subsetor') {
+        subsector = value || 'Unknown';
+      }
+    });
+    
+    log(`Found details for ${ticker}: ${name} (${sector})`, 'scraper');
+    
+    return {
+      ticker,
+      name,
+      sector,
+      subsector,
+    };
+    
+  } catch (error) {
+    log(`Error scraping details for ${ticker}: ${error}`, 'scraper');
+    return null;
+  }
+}

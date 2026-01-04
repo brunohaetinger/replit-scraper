@@ -3,7 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { scrapeFundamentus, isLikelyStateOwned } from "./scraper";
+import { scrapeFundamentus, isLikelyStateOwned, scrapeStockDetail } from "./scraper";
 import { log } from "./index";
 
 export async function registerRoutes(
@@ -64,6 +64,7 @@ export async function registerRoutes(
             ticker: scraped.ticker,
             name: scraped.name,
             sector: scraped.sector || 'Unknown',
+            subsector: null,
             isStateOwned: isLikelyStateOwned(scraped.name, scraped.ticker),
           });
 
@@ -107,6 +108,44 @@ export async function registerRoutes(
       log(`Scraping failed: ${error.message}`, 'scraper');
       res.status(500).json({ 
         message: 'Failed to scrape data', 
+        error: error.message 
+      });
+    }
+  });
+
+  // Scrape details for a specific stock
+  app.post('/api/scrape/:ticker', async (req, res) => {
+    try {
+      const ticker = req.params.ticker.toUpperCase();
+      log(`Scraping details for ${ticker}`, 'scraper');
+      
+      const details = await scrapeStockDetail(ticker);
+      
+      if (!details) {
+        return res.status(404).json({ 
+          message: `Could not find details for ${ticker}`,
+        });
+      }
+
+      // Update stock with detailed information
+      await storage.upsertStock({
+        ticker: details.ticker,
+        name: details.name,
+        sector: details.sector,
+        subsector: details.subsector,
+        isStateOwned: isLikelyStateOwned(details.name, details.ticker),
+      });
+
+      log(`Updated details for ${ticker}`, 'scraper');
+      
+      res.json({
+        message: 'Stock details updated successfully',
+        stock: details,
+      });
+    } catch (error: any) {
+      log(`Failed to scrape details for ${req.params.ticker}: ${error.message}`, 'scraper');
+      res.status(500).json({ 
+        message: 'Failed to scrape stock details', 
         error: error.message 
       });
     }

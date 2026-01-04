@@ -147,6 +147,7 @@ export class DatabaseStorage implements IStorage {
           .set({
             name: stock.name,
             sector: stock.sector,
+            subsector: stock.subsector,
             isStateOwned: stock.isStateOwned,
           })
           .where(eq(stocks.ticker, stock.ticker))
