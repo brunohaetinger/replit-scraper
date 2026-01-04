@@ -121,3 +121,26 @@ export function useScrapeData() {
     },
   });
 }
+
+export function useScrapeStockDetail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ticker: string) => {
+      const url = api.stocks.scrapeDetail.path.replace(':ticker', ticker);
+      const res = await fetch(url, {
+        method: api.stocks.scrapeDetail.method,
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to scrape stock details");
+      }
+      return api.stocks.scrapeDetail.responses[200].parse(await res.json());
+    },
+    onSuccess: (_, ticker) => {
+      // Invalidate queries for this specific stock
+      queryClient.invalidateQueries({ queryKey: [api.stocks.get.path, ticker] });
+      queryClient.invalidateQueries({ queryKey: [api.stocks.list.path] });
+    },
+  });
+}
