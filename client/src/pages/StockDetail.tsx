@@ -49,11 +49,14 @@ export default function StockDetail() {
     );
   }
 
-  const fundamental = stock.latest || {};
-  const hasLimitedInfo = stock.name === stock.ticker || stock.sector === 'Unknown';
+  // The API returns { stock: {...}, history: [...] }
+  const stockData = (stock as any).stock || stock;
+  const history = (stock as any).history || [];
   
-  // Transform real historical data for charts
-  const history = stock.history || [];
+  // Get the latest fundamental from history
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  const fundamental = latest || {};
+  const hasLimitedInfo = stockData.name === stockData.ticker || stockData.sector === 'Unknown';
   
   const profitHistory = history.map((h: any) => ({
     date: format(new Date(h.date), "MMM yy"),
@@ -81,21 +84,21 @@ export default function StockDetail() {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-4xl font-mono font-bold text-foreground tracking-tight">
-                {stock.ticker}
+                {stockData.ticker}
               </h1>
-              {stock.isStateOwned && (
+              {stockData.isStateOwned && (
                 <span className="px-2 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 text-xs font-semibold rounded-md">
                   State Owned
                 </span>
               )}
             </div>
-            <h2 className="text-xl text-muted-foreground font-medium">{stock.name}</h2>
+            <h2 className="text-xl text-muted-foreground font-medium">{stockData.name}</h2>
             <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
-              <span className="bg-muted px-2 py-1 rounded-md">{stock.sector || "Unknown Sector"}</span>
-              {stock.subsector && (
+              <span className="bg-muted px-2 py-1 rounded-md">{stockData.sector || "Unknown Sector"}</span>
+              {stockData.subsector && (
                 <>
                   <span>•</span>
-                  <span className="bg-muted px-2 py-1 rounded-md">{stock.subsector}</span>
+                  <span className="bg-muted px-2 py-1 rounded-md">{stockData.subsector}</span>
                 </>
               )}
               <span>•</span>
@@ -122,7 +125,7 @@ export default function StockDetail() {
                 className="text-xs"
               >
                 <a 
-                  href={`https://statusinvest.com.br/acoes/${stock.ticker.toLowerCase()}`}
+                  href={`https://statusinvest.com.br/acoes/${stockData.ticker?.toLowerCase() || ''}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
